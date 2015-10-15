@@ -112,8 +112,8 @@ def get_server(uri=DEFAULT_URI, username=None, password=None, servername=None):
         pass
     if not username and not password:
         info("Could not get server object, maybe you need to be authenticated?")
-    username = username if username else os.environ.get("PLEX_USERNAME", None) or prompt("Username: ")
-    password = password if password else os.environ.get("PLEX_PASSWORD", None) or getpass()
+    username = username if username else os.environ.get("PLEX_USERNAME", None) or prompt("Plex username: ")
+    password = password if password else os.environ.get("PLEX_PASSWORD", None) or getpass("Plex password: ")
     user = MyPlexUser.signin(username, password)
     if not servername:
         info("Servers: " + ", ".join(a.name for a in user.resources()))
@@ -254,22 +254,26 @@ def main():
     parser.add_argument("-s", "--show", help="Specify show.", action="store_true")
     parser.add_argument("--name", help="Name of movie or show. Use with -m or -s respectively. Omit to produce listing")
     parser.add_argument("-e", "--episode", help="Specify episode. Get list of episodes by specifying show. Supports either full episode name (which may conflict) or SnnEnn (i.e S12E34)")
-    parser.add_argument("-S", "--server", help="Specify server. Defaults to {} $PLEX_SERVER".format(DEFAULT_URI), default=DEFAULT_URI)
-    parser.add_argument("-u", "--username", help="Specify username. Used for Plex authentication. $PLEX_USERNAME")
-    parser.add_argument("-p", "--password", help="Specify password. Provided for convenience only, preferred method is to omit this and enter password at the prompt. $PLEX_PASSWORD")
-    parser.add_argument("--servername", help="Specify server name. Used with -u above, for Plex authentication. $PLEX_SERVERNAME")
+    parser.add_argument("-S", "--server", help="Specify server. Defaults to {} $PLEX_SERVER".format(DEFAULT_URI), default=os.environ.get("PLEX_SERVER", DEFAULT_URI))
+    parser.add_argument("-u", "--username", help="Specify username. Used for Plex authentication. $PLEX_USERNAME", default=os.environ.get("PLEX_USERNAME", None))
+    parser.add_argument("-p", "--password", help="Specify password. Provided for convenience only, preferred method is to omit this and enter password at the prompt. $PLEX_PASSWORD", default=os.environ.get("PLEX_PASSWORD", None))
+    parser.add_argument("--servername", help="Specify server name. Used with -u above, for Plex authentication. $PLEX_SERVERNAME", default=os.environ.get("PLEX_SERVERNAME", None))
     args = parser.parse_args()
-    server = get_server(args.server, username=args.username, password=args.password, servername=args.servername)
-    if type(server) is not PlexServer:
-        info("Aborting.")
-        return server
-    if args.movie:
-        main_movie(server, args)
-    elif args.show:
-        main_show(server, args)
-    else:
-        info("You need to specify either -m or -s for movies or TV shows, respectively.")
-        return 5
+    try:
+        server = get_server(args.server, username=args.username, password=args.password, servername=args.servername)
+        if type(server) is not PlexServer:
+            info("Aborting.")
+            return server
+        if args.movie:
+            main_movie(server, args)
+        elif args.show:
+            main_show(server, args)
+        else:
+            info("You need to specify either -m or -s for movies or TV shows, respectively.")
+            return 5
+    except KeyboardInterrupt:
+        info("\nAborting.")
+        return 1
 
 if __name__ == "__main__":
     sys.exit(main())
