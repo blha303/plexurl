@@ -10,7 +10,7 @@ setup(
     entry_points = {
         "console_scripts": ['plexurl = plexurl.plexurl:main']
         },
-    version = "1.2.0",
+    version = "1.2.1",
     description = "Browse Plex from CLI. Returns transcoding streaming urls to stdout",
     long_description = long_descr,
     author = "Steven Smith",
