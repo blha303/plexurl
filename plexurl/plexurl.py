@@ -25,6 +25,13 @@ DEFAULT_URI = "http://127.0.0.1:32400"
 input = raw_input if hasattr(__builtins__, 'raw_input') else input
 
 def print_multicolumn(alist):
+    """Formats a list into columns to fit on screen. Similar to `ls`. From http://is.gd/6dwsuA (daniweb snippet, search for func name)
+
+    :param alist: list of data to print into columns
+
+    >>> print_multicolumn(["a", "aa", "aaa", "aaaa"])
+      a   aa   aaa   aaaa
+    """
     ncols = shutil.get_terminal_size((80, 20)).columns // max(len(a) for a in alist)
     nrows = - ((-len(alist)) // ncols)
     ncols = - ((-len(alist)) // nrows)
@@ -40,26 +47,31 @@ def print_multicolumn(alist):
         t.add_row(c)
     print(t)
 
-def fmtcols(l):
-    maxlen = max(len(i) for i in l)
-    if len(l) % 2 != 0:
-        l.append(" ")
-    split = int(len(l)/2)
-    l1 = l[0:split]
-    l2 = l[split:]
-    o = []
-    for key, value in zip(l1,l2):
-        o.append(u"{0:<{2}s} {1}".format(key, value, maxlen))
-    return u"\n".join(o)
-
 def choose(q):
+    """ Displays prompt only if program is run from interactive terminal
+
+    :param q: Prompt message
+    :returns: user response
+    :rtype: str
+    """
+
     if os.isatty(sys.stdout.fileno()):
         return prompt(q)
 
 def info(*objs):
+    """ Print message to stderr to avoid interfering with pipeline
+
+    :param objs: passed through to print()
+    """
+
     print(*objs, file=sys.stderr)
 
 def prompt(*objs):
+    """ Print input() prompt to stderr to avoid interfering with pipeline
+
+    :param objs: passed through to input()
+    """
+
     old_stdout = sys.stdout
     try:
         sys.stdout = sys.stderr
@@ -68,14 +80,24 @@ def prompt(*objs):
         sys.stdout = old_stdout
 
 def get_server(uri=DEFAULT_URI, username=None, password=None, servername=None):
+    """ Get Plex server object for further processing.
+
+    :param uri: Server URI. Expects "http://IP-ADDRESS:PORT", where IP-ADDRESS can be a hostname, and PORT is usually 32400
+    :param username: Plex username. Needed if uri fails. User is prompted if parameter is not provided. $PLEX_USERNAME
+    :param password: Plex password. Recommended practice is to leave this as None and respond to the prompt. $PLEX_PASSWORD
+    :param servername: Server name. User is prompted with a list of servers available to their username if parameter is not provided
+    :returns: Server object
+    :rtype: plexapi.server.PlexServer
+    """
+
     try:
         return PlexServer(uri)
     except NotFound:
         pass
     if not username and not password:
         info("Could not get server object, maybe you need to be authenticated?")
-    username = prompt("Username: ") if not username else username
-    password = getpass() if not password else password
+    username = username if username else os.environ.get("PLEX_USERNAME", None) or prompt("Username: ")
+    password = password if password else os.environ.get("PLEX_PASSWORD", None) or getpass()
     user = MyPlexUser.signin(username, password)
     if not servername:
         info("Servers: " + ", ".join(a.name for a in user.resources()))
@@ -104,14 +126,87 @@ def get_server(uri=DEFAULT_URI, username=None, password=None, servername=None):
     return 10
 
 def lookup_movie(server, movie):
+    """ Retrieves movie object from specified server.
+
+    :param server: Plex server object, probably returned by get_server()
+    :type server: plexapi.server.PlexServer
+    :param movie: Movie name
+    :type movie: str
+    :returns: Movie object
+    :rtype: plexapi.video.Movie
+    """
+
     return server.library.section("Movies").get(movie)
 
 def lookup_episode(server, show, episode):
+    """ Retrieves episode object from specified server.
+
+    :param server: Plex server object, probably returned by get_server()
+    :type server: plexapi.server.PlexServer
+    :param show: TV show name
+    :type show: str
+    :param episode: Episode name, or SnnEnn designation
+    :type episode: str
+    :returns: Episode object
+    :rtype: plexapi.video.Episode
+    """
+
     show = server.library.section("TV Shows").get(show)
     epcheck = re.match("S(\d+?)E(\d+)", episode)
     if epcheck:
         return show.seasons()[int(epcheck.group(1))].episodes()[int(epcheck.group(2))]
     return show.episode(episode)
+
+def main_movie(server, args):
+    """ Convenience function for printing movie stream url
+
+    :param server: Server object from get_server()
+    :type server: plexapi.server.PlexServer
+    :param args: argparse.ArgumentParser().parse_args object
+    """
+
+    if args.name:
+        print(lookup_movie(server, args.name).getStreamUrl())
+    else:
+        print_multicolumn([u"{}".format(movie.title) for movie in server.library.section("Movies").all()])
+        selection = choose("Select a movie: ")
+        if selection:
+            print(lookup_movie(server, selection).getStreamUrl())
+
+def main_show(server, args):
+    """ Convenience function for printing show names
+
+    :param server: Server object from get_server()
+    :type server: plexapi.server.PlexServer
+    :param args: argparse.ArgumentParser().parse_args object
+    """
+
+    if args.name:
+        main_episode(server, args.name, args.episode)
+    else:
+        print_multicolumn([u"{}".format(show.title) for show in server.library.section("TV Shows").all()])
+        selection = choose("Select a show: ")
+        if selection:
+            main_episode(server, selection, None)
+
+def main_episode(server, show, episode):
+    """ Convenience function for printing movie stream url
+
+    :param server: Server object from get_server()
+    :type server: plexapi.server.PlexServer
+    :param show: TV show name
+    :type show: str
+    :param episode: Episode name, or SnnEnn designation
+    :type episode: str
+    """
+
+    if episode:
+        print(lookup_episode(server, show, episode).getStreamUrl())
+    else:
+        print_multicolumn([u"S{}E{} {}".format(ep.parentIndex.zfill(2), ep.index.zfill(2), ep.title) for ep in server.library.section("TV Shows").get(show).episodes()])
+        selection = choose("Select an episode: ")
+        if selection:
+            print(lookup_episode(server, show, selection).getStreamUrl())
 
 def main():
     parser = argparse.ArgumentParser()
@@ -129,29 +224,9 @@ def main():
         info("Aborting.")
         return server
     if args.movie:
-        if args.name:
-            print(lookup_movie(server, args.name).getStreamUrl())
-        else:
-            print_multicolumn([u"{}".format(movie.title) for movie in server.library.section("Movies").all()])
-            selection = choose("Select a movie: ")
-            if selection:
-                print(lookup_movie(server, selection).getStreamUrl())
+        main_movie(server, args)
     elif args.show:
-        def get_ep(show, ep):
-            if ep:
-                print(lookup_episode(server, show, ep).getStreamUrl())
-            else:
-                print_multicolumn([u"S{}E{} {}".format(ep.parentIndex.zfill(2), ep.index.zfill(2), ep.title) for ep in server.library.section("TV Shows").get(show).episodes()])
-                selection = choose("Select an episode: ")
-                if selection:
-                    print(lookup_episode(server, show, selection).getStreamUrl())
-        if args.name:
-            get_ep(args.name, args.episode)
-        else:
-            print_multicolumn([u"{}".format(show.title) for show in server.library.section("TV Shows").all()])
-            selection = choose("Select a show: ")
-            if selection:
-                get_ep(selection, None)
+        main_show(server, args)
     else:
         info("You need to specify either -m or -s for movies or TV shows, respectively.")
         return 5
