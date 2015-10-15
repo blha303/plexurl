@@ -6,9 +6,11 @@ Browse Plex from CLI. Returns transcoding streaming urls to stdout
 Usage
 -----
 
+::
+
     usage: plexurl [-h] [-m] [-s] [--name NAME] [-e EPISODE] [-S SERVER]
                    [-u USERNAME] [-p PASSWORD] [--servername SERVERNAME]
-    
+
     optional arguments:
       -h, --help            show this help message and exit
       -m, --movie           Specify movie.
@@ -36,11 +38,13 @@ Usage
 Installation
 ------------
 
-Via `pip`:
+Via ``pip``:
+
+::
 
     pip3 install plexurl
 
 Alternatively:
 
- * Clone the repository, `cd plexurl`
- * Run `python3 setup.py install` or `pip3 install -e`
+-  Clone the repository, ``cd plexurl``
+-  Run ``python3 setup.py install`` or ``pip3 install -e``

@@ -209,15 +209,15 @@ def main_episode(server, show, episode):
             print(lookup_episode(server, show, selection).getStreamUrl())
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog="plexurl")
     parser.add_argument("-m", "--movie", help="Specify movie.", action="store_true")
     parser.add_argument("-s", "--show", help="Specify show.", action="store_true")
     parser.add_argument("--name", help="Name of movie or show. Use with -m or -s respectively. Omit to produce listing")
     parser.add_argument("-e", "--episode", help="Specify episode. Get list of episodes by specifying show. Supports either full episode name (which may conflict) or SnnEnn (i.e S12E34)")
-    parser.add_argument("-S", "--server", help="Specify server. Defaults to {}".format(DEFAULT_URI), default=DEFAULT_URI)
-    parser.add_argument("-u", "--username", help="Specify username. Used for Plex authentication")
-    parser.add_argument("-p", "--password", help="Specify password. Provided for convenience only, preferred method is to omit this and enter password at the prompt")
-    parser.add_argument("--servername", help="Specify server name. Used with -u above, for Plex authentication.")
+    parser.add_argument("-S", "--server", help="Specify server. Defaults to {} $PLEX_SERVER".format(DEFAULT_URI), default=DEFAULT_URI)
+    parser.add_argument("-u", "--username", help="Specify username. Used for Plex authentication. $PLEX_USERNAME")
+    parser.add_argument("-p", "--password", help="Specify password. Provided for convenience only, preferred method is to omit this and enter password at the prompt. $PLEX_PASSWORD")
+    parser.add_argument("--servername", help="Specify server name. Used with -u above, for Plex authentication. $PLEX_SERVERNAME")
     args = parser.parse_args()
     server = get_server(args.server, username=args.username, password=args.password, servername=args.servername)
     if type(server) is not PlexServer:
