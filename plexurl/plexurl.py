@@ -3,6 +3,7 @@ from __future__ import print_function
 from plexapi.server import PlexServer
 from plexapi.myplex import MyPlexUser
 from plexapi.exceptions import NotFound
+from plexapi.video import Show
 
 from prettytable import PrettyTable, NONE
 
@@ -47,14 +48,29 @@ def print_multicolumn(alist):
         t.add_row(c)
     print(t)
 
-def choose(q):
-    """ Displays prompt only if program is run from interactive terminal
+def truncate(text, chars=30, ending="..."):
+    """ Truncates text longer than CHARS chars
 
-    :param q: Prompt message
-    :returns: user response
-    :rtype: str
+    :param text: text to truncate
+    :type text: str
+    :param chars: maximum length of text
+    :param ending: string to attach to the end after truncation
+    :returns: truncated text with ending
     """
 
+    return text if len(text) < 30 else text[:25] + "..."
+
+def choose(options, q):
+    """ Displays multi-column interface, with a prompt if terminal is interactive
+
+    :param options: list of string options
+    :param q: prompt message
+    """
+
+    if len(options) == 1:
+        info("Selecting {}...".format(options[0]))
+        return options[0]
+    print_multicolumn(options)
     if os.isatty(sys.stdout.fileno()):
         return prompt(q)
 
@@ -136,7 +152,15 @@ def lookup_movie(server, movie):
     :rtype: plexapi.video.Movie
     """
 
-    return server.library.section("Movies").get(movie)
+    try:
+        return server.library.section("Movies").get(movie)
+    except NotFound:
+        results = server.library.section("Movies").search(movie)
+        if results:
+            return server.library.section("Movies").get(choose(results, "Select a movie: "))
+        else:
+            info("No results")
+            return 50
 
 def lookup_episode(server, show, episode):
     """ Retrieves episode object from specified server.
@@ -151,11 +175,27 @@ def lookup_episode(server, show, episode):
     :rtype: plexapi.video.Episode
     """
 
-    show = server.library.section("TV Shows").get(show)
+    try:
+        show = show if type(show) is Show else server.library.section("TV Shows").get(show)
+    except NotFound:
+        results = server.library.section("TV Shows").search(show)
+        if results:
+            show = server.library.section("TV Shows").get(choose(results, "Select a show: "))
+        else:
+            info("No results")
+            return 50
     epcheck = re.match("S(\d+?)E(\d+)", episode)
     if epcheck:
         return show.seasons()[int(epcheck.group(1))].episodes()[int(epcheck.group(2))]
-    return show.episode(episode)
+    try:
+        return show.episode(episode)
+    except NotFound:
+        results = ["S{}E{} {}".format(ep.parentIndex.zfill(2), ep.index.zfill(2), truncate(ep.title)) for ep in show.episodes() if episode in ep.title]
+        if results:
+            return lookup_episode(server, show, choose(results, "Select an episode: "))
+        else:
+            info("No results")
+            return 50
 
 def main_movie(server, args):
     """ Convenience function for printing movie stream url
@@ -163,13 +203,13 @@ def main_movie(server, args):
     :param server: Server object from get_server()
     :type server: plexapi.server.PlexServer
     :param args: argparse.ArgumentParser().parse_args object
+    :returns: Return code
     """
 
     if args.name:
         print(lookup_movie(server, args.name).getStreamUrl())
     else:
-        print_multicolumn([u"{}".format(movie.title) for movie in server.library.section("Movies").all()])
-        selection = choose("Select a movie: ")
+        selection = choose([u"{}".format(movie.title) for movie in server.library.section("Movies").all()], "Select a movie: ")
         if selection:
             print(lookup_movie(server, selection).getStreamUrl())
 
@@ -179,13 +219,13 @@ def main_show(server, args):
     :param server: Server object from get_server()
     :type server: plexapi.server.PlexServer
     :param args: argparse.ArgumentParser().parse_args object
+    :returns: Return code
     """
 
     if args.name:
         main_episode(server, args.name, args.episode)
     else:
-        print_multicolumn([u"{}".format(show.title) for show in server.library.section("TV Shows").all()])
-        selection = choose("Select a show: ")
+        selection = choose([u"{}".format(show.title) for show in server.library.section("TV Shows").all()], "Select a show: ")
         if selection:
             main_episode(server, selection, None)
 
@@ -198,13 +238,13 @@ def main_episode(server, show, episode):
     :type show: str
     :param episode: Episode name, or SnnEnn designation
     :type episode: str
+    :returns: Return code
     """
 
     if episode:
         print(lookup_episode(server, show, episode).getStreamUrl())
     else:
-        print_multicolumn([u"S{}E{} {}".format(ep.parentIndex.zfill(2), ep.index.zfill(2), ep.title if len(ep.title) < 30 else ep.title[:25] + "...") for ep in server.library.section("TV Shows").get(show).episodes()])
-        selection = choose("Select an episode: ")
+        selection = choose(["S{}E{} {}".format(ep.parentIndex.zfill(2), ep.index.zfill(2), truncate(ep.title)) for ep in server.library.section("TV Shows").get(show).episodes()], "Select an episode: ")
         if selection:
             print(lookup_episode(server, show, selection).getStreamUrl())
 
