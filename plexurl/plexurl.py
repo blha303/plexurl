@@ -203,7 +203,7 @@ def main_episode(server, show, episode):
     if episode:
         print(lookup_episode(server, show, episode).getStreamUrl())
     else:
-        print_multicolumn([u"S{}E{} {}".format(ep.parentIndex.zfill(2), ep.index.zfill(2), ep.title) for ep in server.library.section("TV Shows").get(show).episodes()])
+        print_multicolumn([u"S{}E{} {}".format(ep.parentIndex.zfill(2), ep.index.zfill(2), ep.title if len(ep.title) < 30 else ep.title[:25] + "...") for ep in server.library.section("TV Shows").get(show).episodes()])
         selection = choose("Select an episode: ")
         if selection:
             print(lookup_episode(server, show, selection).getStreamUrl())
