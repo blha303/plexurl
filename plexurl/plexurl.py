@@ -246,7 +246,7 @@ def main_episode(server, show, episode):
     else:
         selection = choose(["S{}E{} {}".format(ep.parentIndex.zfill(2), ep.index.zfill(2), truncate(ep.title)) for ep in server.library.section("TV Shows").get(show).episodes()], "Select an episode: ")
         if selection:
-            print(lookup_episode(server, show, selection).getStreamUrl())
+            print(lookup_episode(server, show, selection).getStreamUrl(videoResolution=args.resolution))
 
 def main():
     parser = argparse.ArgumentParser(prog="plexurl")
@@ -258,6 +258,7 @@ def main():
     parser.add_argument("-u", "--username", help="Specify username. Used for Plex authentication. $PLEX_USERNAME", default=os.environ.get("PLEX_USERNAME", None))
     parser.add_argument("-p", "--password", help="Specify password. Provided for convenience only, preferred method is to omit this and enter password at the prompt. $PLEX_PASSWORD", default=os.environ.get("PLEX_PASSWORD", None))
     parser.add_argument("--servername", help="Specify server name. Used with -u above, for Plex authentication. $PLEX_SERVERNAME", default=os.environ.get("PLEX_SERVERNAME", None))
+    parser.add_argument("-r", "--resolution", help="Specify resolution. Should be of format WIDTHxHEIGHT. Defaults to 1280x720, or Plex's default")
     args = parser.parse_args()
     try:
         server = get_server(args.server, username=args.username, password=args.password, servername=args.servername)
