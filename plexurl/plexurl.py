@@ -34,8 +34,12 @@ def print_multicolumn(alist):
       a   aa   aaa   aaaa
     """
     ncols = shutil.get_terminal_size((80, 20)).columns // max(len(a) for a in alist)
-    nrows = - ((-len(alist)) // ncols)
-    ncols = - ((-len(alist)) // nrows)
+    try:
+        nrows = - ((-len(alist)) // ncols)
+        ncols = - ((-len(alist)) // nrows)
+    except ZeroDivisionError:
+        print("\n".join(alist))
+        return
     t = PrettyTable([str(x) for x in range(ncols)])
     t.header = False
     t.align = 'l'
