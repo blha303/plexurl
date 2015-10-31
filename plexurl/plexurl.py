@@ -25,6 +25,24 @@ DEFAULT_URI = "http://127.0.0.1:32400"
 
 input = raw_input if hasattr(__builtins__, 'raw_input') else input
 
+def get_terminal_size(width=80, height=25, fd=1):
+    """ Gets current terminal size
+
+    :param width: Default width to return if all other methods fail
+    :param height: Default height to return if all other methods fail
+    :param fd: File descriptor to open (1 = stdout)
+    :returns: tuple(columns:int, rows:int)
+    """
+    try:
+        import fcntl, termios, struct
+        wh = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))[::-1]
+    except:
+        try:
+            wh = (os.environ['COLUMNS'], os.environ['LINES'])
+        except:
+            wh = (25, 80)
+    return wh
+
 def print_multicolumn(alist):
     """Formats a list into columns to fit on screen. Similar to `ls`. From http://is.gd/6dwsuA (daniweb snippet, search for func name)
 
@@ -33,7 +51,7 @@ def print_multicolumn(alist):
     >>> print_multicolumn(["a", "aa", "aaa", "aaaa"])
       a   aa   aaa   aaaa
     """
-    ncols = shutil.get_terminal_size((80, 20)).columns // max(len(a) for a in alist)
+    ncols = get_terminal_size(80, 20)[0] // max(len(a) for a in alist)
     try:
         nrows = - ((-len(alist)) // ncols)
         ncols = - ((-len(alist)) // nrows)
