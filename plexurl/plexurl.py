@@ -213,7 +213,7 @@ def main_movie(server, args):
     if args.name:
         print(lookup_movie(server, args.name).getStreamUrl())
     else:
-        selection = choose([u"{}".format(movie.title) for movie in server.library.section("Movies").all()], "Select a movie: ")
+        selection = choose(["{}".format(movie.title) for movie in server.library.section("Movies").all()], "Select a movie: ")
         if selection:
             print(lookup_movie(server, selection).getStreamUrl())
 
@@ -229,7 +229,7 @@ def main_show(server, args):
     if args.name:
         main_episode(server, args.name, args.episode)
     else:
-        selection = choose([u"{}".format(show.title) for show in server.library.section("TV Shows").all()], "Select a show: ")
+        selection = choose(["{}".format(show.title) for show in server.library.section("TV Shows").all()], "Select a show: ")
         if selection:
             main_episode(server, selection, None)
 
