@@ -208,11 +208,12 @@ def lookup_episode(server, show, episode):
             return 50
     epcheck = re.match("S(\d+?)E(\d+)", episode)
     if epcheck:
-        return show.seasons()[int(epcheck.group(1))].episodes()[int(epcheck.group(2))]
+        return show.seasons()[int(epcheck.group(1)) - 1].episodes()[int(epcheck.group(2)) - 1]
     try:
         return show.episode(episode)
     except NotFound:
-        results = ["S{}E{} {}".format(ep.parentIndex.zfill(2), ep.index.zfill(2), truncate(ep.title)) for ep in show.episodes() if episode in ep.title]
+        results = ["S{}E{} {}".format(ep.parentIndex.zfill(2), ep.index.zfill(2), truncate(ep.title))
+                   for ep in show.episodes() if episode in ep.title]
         if results:
             return lookup_episode(server, show, choose(results, "Select an episode: "))
         else:
@@ -245,13 +246,13 @@ def main_show(server, args):
     """
 
     if args.name:
-        main_episode(server, args.name, args.episode)
+        main_episode(server, args.name, args.episode, args.resolution)
     else:
         selection = choose(["{}".format(show.title) for show in server.library.section("TV Shows").all()], "Select a show: ")
         if selection:
-            main_episode(server, selection, None)
+            main_episode(server, selection, None, args.resolution)
 
-def main_episode(server, show, episode):
+def main_episode(server, show, episode, resolution="1280x720"):
     """ Convenience function for printing movie stream url
 
     :param server: Server object from get_server()
@@ -268,7 +269,7 @@ def main_episode(server, show, episode):
     else:
         selection = choose(["S{}E{} {}".format(ep.parentIndex.zfill(2), ep.index.zfill(2), truncate(ep.title)) for ep in server.library.section("TV Shows").get(show).episodes()], "Select an episode: ")
         if selection:
-            print(lookup_episode(server, show, selection).getStreamUrl(videoResolution=args.resolution))
+            print(lookup_episode(server, show, selection).getStreamUrl(videoResolution=resolution))
 
 def main():
     parser = argparse.ArgumentParser(prog="plexurl")
